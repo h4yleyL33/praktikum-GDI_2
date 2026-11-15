@@ -4,7 +4,8 @@ Nama: Khalitputra Afana
 NPM: 140810240007
 
 Program ini menggambar garis dan lingkaran dengan tiga algoritma garis (dasar, DDA, Bresenham)
-dan tiga algoritma lingkaran (dasar, polar, Bresenham).
+dan tiga algoritma lingkaran (dasar, polar, Bresenham). Koordinat diatur dengan slider dan
+hasil tiap algoritma ditampilkan pada kanvas terpisah.
 
 ## Menjalankan
 

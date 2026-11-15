@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace praktikum2
 {
-    // Praktikum 2 - Penggambaran Objek Primitif (garis dan lingkaran).
+    // Praktikum 2 - Algoritma Penggambaran Objek Primitif.
     internal static class Program
     {
         [STAThread]
@@ -16,143 +16,158 @@ namespace praktikum2
             Application.Run(BuatForm());
         }
 
+        private const int Lebar = 250, Tinggi = 250, Jarak = 14;
+        private const int MaxNilai = 300;
+
+        private static readonly string[] NamaGaris = { "X1", "Y1", "X2", "Y2" };
+        private static readonly string[] NamaLing = { "X", "Y", "Radius" };
+
         internal static Form BuatForm()
         {
             Form form = new Form
             {
                 Text = "Praktikum 2 - Objek Primitif",
-                ClientSize = new Size(900, 620),
+                ClientSize = new Size(830, 800),
                 StartPosition = FormStartPosition.CenterScreen,
-                Font = new Font("Segoe UI", 10)
+                Font = new Font("Segoe UI", 9)
             };
 
-            ComboBox objek = new ComboBox
+            // ---- Penggambaran Garis ----
+            Label(form, "Penggambaran Garis", 10, 10, true);
+            int[] nilaiGaris = { 40, 60, 210, 200 };
+            TrackBar[] barGaris = new TrackBar[4];
+            Label[] angkaGaris = new Label[4];
+            for (int i = 0; i < 4; i++)
             {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(12, 12), Width = 120
-            };
-            objek.Items.AddRange(new object[] { "Garis", "Lingkaran" });
-            objek.SelectedIndex = 0;
+                int kx = 14 + i * 200;
+                angkaGaris[i] = Label(form, NamaGaris[i], kx, 40);
+                barGaris[i] = Slider(form, nilaiGaris[i], kx, 62, 180);
+            }
+            PictureBox[,] kanvasGaris = BarisKanvas(form, 96, new[] { "DASAR", "DDA", "Bresenham" });
+            Button tombolGaris = new Button { Text = "Gambar", Location = new Point(14, 370), Size = new Size(100, 30) };
+            Label hasilGaris = Label(form, "", 124, 376);
+            form.Controls.Add(tombolGaris);
 
-            ComboBox algoritma = new ComboBox
+            // ---- Penggambaran Lingkaran ----
+            Label(form, "Penggambaran Lingkaran", 10, 415, true);
+            int[] nilaiLing = { 125, 125, 80 };
+            TrackBar[] barLing = new TrackBar[3];
+            Label[] angkaLing = new Label[3];
+            for (int i = 0; i < 3; i++)
             {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(140, 12), Width = 120
-            };
-            algoritma.Items.AddRange(new object[] { "Dasar", "DDA", "Bresenham", "Polar" });
-            algoritma.SelectedIndex = 2;
+                int kx = 14 + i * 265;
+                angkaLing[i] = Label(form, NamaLing[i], kx, 445);
+                barLing[i] = Slider(form, nilaiLing[i], kx, 467, 245);
+            }
+            PictureBox[,] kanvasLing = BarisKanvas(form, 502, new[] { "DASAR", "Polar", "Bresenham" });
+            Button tombolLing = new Button { Text = "Gambar", Location = new Point(14, 776), Size = new Size(100, 30) };
+            Label hasilLing = Label(form, "", 124, 782);
+            form.Controls.Add(tombolLing);
 
-            CheckBox tampilTitik = new CheckBox
+            void Segarkan(TrackBar[] bar, Label[] angka, string[] nama)
             {
-                Text = "Tampilkan titik", Location = new Point(270, 14), Checked = true
-            };
-            Button acak = new Button { Text = "Acak", Location = new Point(400, 10), Width = 70 };
-            Button bersih = new Button { Text = "Bersihkan", Location = new Point(476, 10), Width = 90 };
-            Label info = new Label
+                for (int i = 0; i < bar.Length; i++)
+                    angka[i].Text = nama[i] + " " + bar[i].Value;
+            }
+
+            foreach (TrackBar b in barGaris) b.ValueChanged += (s, e) => Segarkan(barGaris, angkaGaris, NamaGaris);
+            foreach (TrackBar b in barLing) b.ValueChanged += (s, e) => Segarkan(barLing, angkaLing, NamaLing);
+
+            tombolGaris.Click += (s, e) =>
             {
-                Location = new Point(12, 44), AutoSize = true, ForeColor = Color.DimGray
-            };
-
-            PictureBox kanvas = new PictureBox
-            {
-                Location = new Point(12, 72), Size = new Size(876, 536),
-                BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle
-            };
-
-            form.Controls.Add(kanvas);
-            form.Controls.Add(info);
-            form.Controls.Add(objek);
-            form.Controls.Add(algoritma);
-            form.Controls.Add(tampilTitik);
-            form.Controls.Add(acak);
-            form.Controls.Add(bersih);
-
-            // Titik ujung garis (atau diameter lingkaran) pada koordinat kanvas.
-            Point a = new Point(80, 80);
-            Point b = new Point(700, 460);
-
-            Action gambar = () =>
-            {
-                if (kanvas.Width <= 0 || kanvas.Height <= 0) return;
-                string teks;
-                Bitmap gambarBaru = BuatGambar(kanvas.Width, kanvas.Height,
-                    objek.SelectedItem as string, algoritma.SelectedItem as string,
-                    tampilTitik.Checked, a, b, out teks);
-                Image lama = kanvas.Image;
-                kanvas.Image = gambarBaru;
-                if (lama != null) lama.Dispose();
-                info.Text = teks;
+                int x1 = barGaris[0].Value, y1 = barGaris[1].Value;
+                int x2 = barGaris[2].Value, y2 = barGaris[3].Value;
+                for (int i = 0; i < 3; i++)
+                {
+                    List<Point> titik = i == 0 ? Garis.Dasar(x1, y1, x2, y2)
+                                   : i == 1 ? Garis.Dda(x1, y1, x2, y2)
+                                   : Garis.Bresenham(x1, y1, x2, y2);
+                    Gambar(kanvasGaris[i, 0], titik);
+                }
+                hasilGaris.Text = "Garis (" + x1 + "," + y1 + ")->(" + x2 + "," + y2 + ")";
             };
 
-            objek.SelectedIndexChanged += (s, e) => gambar();
-            algoritma.SelectedIndexChanged += (s, e) => gambar();
-            tampilTitik.CheckedChanged += (s, e) => gambar();
-            acak.Click += (s, e) =>
+            tombolLing.Click += (s, e) =>
             {
-                Random rnd = new Random();
-                a = new Point(rnd.Next(60, 400), rnd.Next(60, 300));
-                b = new Point(rnd.Next(400, 760), rnd.Next(300, 520));
-                gambar();
+                int cx = barLing[0].Value, cy = barLing[1].Value, r = Math.Max(1, barLing[2].Value);
+                for (int i = 0; i < 3; i++)
+                {
+                    List<Point> titik = i == 0 ? Lingkaran.Dasar(cx, cy, r)
+                                   : i == 1 ? Lingkaran.Polar(cx, cy, r)
+                                   : Lingkaran.Bresenham(cx, cy, r);
+                    Gambar(kanvasLing[i, 0], titik);
+                }
+                hasilLing.Text = "Lingkaran pusat(" + cx + "," + cy + ") r=" + r;
             };
-            bersih.Click += (s, e) =>
-            {
-                if (kanvas.Image != null) { kanvas.Image.Dispose(); kanvas.Image = null; }
-                info.Text = "";
-            };
-            form.Shown += (s, e) => gambar();
-            form.FormClosed += (s, e) =>
-            {
-                if (kanvas.Image != null) kanvas.Image.Dispose();
-            };
+
+            Segarkan(barGaris, angkaGaris, NamaGaris);
+            Segarkan(barLing, angkaLing, NamaLing);
+            form.Shown += (s, e) => { tombolGaris.PerformClick(); tombolLing.PerformClick(); };
             return form;
         }
 
-        // Menggambar objek + algoritma terpilih ke bitmap, mengembalikan keterangan.
-        internal static Bitmap BuatGambar(int lebar, int tinggi, string objek, string algoritma,
-            bool tampilTitik, Point a, Point b, out string keterangan)
+        private static Label Label(Form form, string teks, int x, int y, bool tebal = false)
         {
-            Bitmap gambar = new Bitmap(lebar, tinggi);
+            Label l = new Label
+            {
+                Text = teks, Location = new Point(x, y), AutoSize = true,
+                Font = tebal ? new Font("Segoe UI", 10, FontStyle.Bold) : form.Font
+            };
+            form.Controls.Add(l);
+            return l;
+        }
+
+        // Tiga kanvas sejajar, ukuran seragam.
+        private static PictureBox[,] BarisKanvas(Form form, int y, string[] judul)
+        {
+            PictureBox[,] hasil = new PictureBox[3, 1];
+            for (int i = 0; i < 3; i++)
+            {
+                int x = 14 + i * (Lebar + Jarak);
+                Label(form, judul[i], x, y - 20, true);
+                PictureBox p = new PictureBox
+                {
+                    Location = new Point(x, y), Size = new Size(Lebar, Tinggi),
+                    BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle
+                };
+                form.Controls.Add(p);
+                hasil[i, 0] = p;
+            }
+            return hasil;
+        }
+
+        private static TrackBar Slider(Form form, int nilai, int x, int y, int lebar)
+        {
+            TrackBar t = new TrackBar
+            {
+                Location = new Point(x, y), Width = lebar,
+                Minimum = 0, Maximum = MaxNilai,
+                Value = Math.Min(MaxNilai, Math.Max(0, nilai)),
+                TickFrequency = 20
+            };
+            form.Controls.Add(t);
+            return t;
+        }
+
+        // Gambar kumpulan titik piksel ke kanvas.
+        private static void Gambar(PictureBox kanvas, List<Point> titik)
+        {
+            if (kanvas.Width <= 0 || kanvas.Height <= 0) return;
+            Bitmap gambar = new Bitmap(kanvas.Width, kanvas.Height);
             using (Graphics g = Graphics.FromImage(gambar))
             {
                 g.Clear(Color.White);
                 using (Pen kisi = new Pen(Color.FromArgb(235, 235, 235)))
                 {
-                    for (int x = 0; x < lebar; x += 40) g.DrawLine(kisi, x, 0, x, tinggi);
-                    for (int y = 0; y < tinggi; y += 40) g.DrawLine(kisi, 0, y, lebar, y);
+                    for (int x = 0; x < kanvas.Width; x += 25) g.DrawLine(kisi, x, 0, x, kanvas.Height);
+                    for (int y = 0; y < kanvas.Height; y += 25) g.DrawLine(kisi, 0, y, kanvas.Width, y);
                 }
-
-                List<Point> titik;
-                if (objek == "Lingkaran")
-                {
-                    int cx = (a.X + b.X) / 2, cy = (a.Y + b.Y) / 2;
-                    int r = Math.Max(20, (int)Math.Sqrt(
-                        (b.X - cx) * (double)(b.X - cx) + (b.Y - cy) * (double)(b.Y - cy)));
-                    titik = algoritma == "Polar" ? Lingkaran.Polar(cx, cy, r)
-                          : algoritma == "Dasar" ? Lingkaran.Dasar(cx, cy, r)
-                          : Lingkaran.Bresenham(cx, cy, r);
-                    keterangan = "Lingkaran pusat(" + cx + "," + cy + ") r=" + r +
-                                 " | " + algoritma + " | " + titik.Count + " titik";
-                }
-                else
-                {
-                    titik = algoritma == "Dasar" ? Garis.Dasar(a.X, a.Y, b.X, b.Y)
-                          : algoritma == "Bresenham" ? Garis.Bresenham(a.X, a.Y, b.X, b.Y)
-                          : Garis.Dda(a.X, a.Y, b.X, b.Y);
-                    keterangan = "Garis (" + a.X + "," + a.Y + ")->(" + b.X + "," + b.Y + ")" +
-                                 " | " + algoritma + " | " + titik.Count + " titik";
-                }
-
-                if (tampilTitik)
-                {
-                    using (Brush kuas = new SolidBrush(Color.Blue))
-                        foreach (Point p in titik) g.FillRectangle(kuas, p.X, p.Y, 2, 2);
-                }
-                else if (titik.Count >= 2)
-                {
-                    using (Pen pena = new Pen(Color.Blue, 1)) g.DrawLines(pena, titik.ToArray());
-                }
+                using (Brush kuas = new SolidBrush(Color.Blue))
+                    foreach (Point p in titik) g.FillRectangle(kuas, p.X, p.Y, 2, 2);
             }
-            return gambar;
+            Image lama = kanvas.Image;
+            kanvas.Image = gambar;
+            if (lama != null) lama.Dispose();
         }
     }
 }
